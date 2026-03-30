@@ -1,6 +1,9 @@
-package com.supdevinci.carracing;
+package com.supdevinci.carracing.mob;
 
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.supdevinci.carracing.Player;
 
 
 public class Npc {
@@ -20,36 +23,59 @@ public class Npc {
         chooseNewDirection();
     }
 
+    public void draw(ShapeRenderer sr){
+        sr.setColor(Color.GOLD);
+        sr.circle(this.getX(), this.getY(), 14f);
 
-    public void update(float delta, float worldWidth, float worldHeight) {
+    }
+
+
+    public void update(float delta, float worldWidth, float worldHeight, Player player) {
         changeDirectionTimer -= delta;
 
         if(changeDirectionTimer <= 0f) {
             chooseNewDirection();
         }
 
-        x += directionX * speed * delta;
-        y += directionY * speed * delta;
+        move(directionX, directionY, delta);
+        keepInsideWorld(worldWidth, worldHeight);
+    }
+
+    protected void move(float moveX, float moveY, float delta) {
+        x += moveX * speed * delta;
+        y += moveY * speed * delta;
+    }
+
+    protected void keepInsideWorld(float worldWidth, float worldHeight) {
+        boolean touchedEdge = false;
 
         if(x < 0f){
             x = 0f;
-            chooseNewDirection();
+            touchedEdge = true;
         }
 
-        if(x>worldWidth){
+        if(x > worldWidth){
             x = worldWidth;
-            chooseNewDirection();
+            touchedEdge = true;
         }
 
         if (y < 0f){
             y = 0f;
-            chooseNewDirection();
+            touchedEdge = true;
         }
 
         if(y > worldHeight){
             y = worldHeight;
+            touchedEdge = true;
+        }
+
+        if (touchedEdge) {
             chooseNewDirection();
         }
+    }
+
+    protected float getSpeed() {
+        return speed;
     }
 
     private void chooseNewDirection() {
@@ -89,4 +115,3 @@ public class Npc {
         return y;
     }
 }
-

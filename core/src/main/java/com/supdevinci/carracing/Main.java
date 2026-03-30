@@ -28,7 +28,7 @@ public class Main extends ApplicationAdapter {
         window.add("This is a simple Scene2D view.").row();
         final TextButton button = new TextButton("Click me!", skin);
         button.pad(8f);
-        button.addListener(snew ChangeListener() {
+        button.addListener(new ChangeListener() {
             @Override
             public void changed(final ChangeEvent event, final Actor actor) {
                 button.setText("Clicked.");

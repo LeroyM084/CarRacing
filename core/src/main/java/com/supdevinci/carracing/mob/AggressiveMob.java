@@ -1,19 +1,18 @@
 package com.supdevinci.carracing.mob;
 
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.supdevinci.carracing.Player;
+import com.supdevinci.carracing.physics.PhysicsWorld;
 
-public class AgressiveMob extends Npc{
+public class AggressiveMob extends Npc {
     private static final float AGGRO_RADIUS = 250f;
 
-
-    public AgressiveMob(float x, float y, float speed, Color color) {
-        super(x, y, speed, color);
+    public AggressiveMob(float x, float y, float speed, Color color, PhysicsWorld physicsWorld) {
+        super(x, y, speed, color, physicsWorld);
     }
 
     @Override
-    public void update(float delta, float worldWidth, float worldHeight, Player player) {
+    public void update(float delta, Player player) {
         if (!isAlive()) {
             return;
         }
@@ -25,12 +24,11 @@ public class AgressiveMob extends Npc{
         if (distanceSquared <= AGGRO_RADIUS * AGGRO_RADIUS) {
             float distance = (float) Math.sqrt(distanceSquared);
             if (distance > 0f) {
-                move(dx / distance, dy / distance, delta);
-                keepInsideWorld(worldWidth, worldHeight);
+                move(dx / distance, dy / distance);
                 return;
             }
         }
 
-        super.update(delta, worldWidth, worldHeight, player);
+        super.update(delta, player);
     }
 }

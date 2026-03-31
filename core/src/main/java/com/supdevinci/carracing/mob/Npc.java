@@ -3,15 +3,19 @@ package com.supdevinci.carracing.mob;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.physics.box2d.Body;
 import com.supdevinci.carracing.Player;
+import com.supdevinci.carracing.physics.PhysicsWorld;
 
 
 public class Npc {
-    private static final float COLLISION_RADIUS = 14f;
+    public static final float COLLISION_RADIUS = 14f;
+    private static final float EDGE_EPSILON = 0.5f;
 
     private float x;
     private float y;
     private final float speed;
+    private final Body body;
 
     private float directionX;
     private float directionY;
@@ -21,10 +25,11 @@ public class Npc {
     private int hp;
     public boolean isAlive = true;
 
-    public Npc(float x, float y, float speed, Color color){
+    public Npc(float x, float y, float speed, Color color, PhysicsWorld physicsWorld){
         this.x = x;
         this.y = y;
         this.speed = speed;
+        this.body = physicsWorld.createDynamicCircle(x, y, COLLISION_RADIUS);
         this.hp = 15;
         this.color = color;
 
@@ -55,8 +60,9 @@ public class Npc {
     }
 
 
-    public void update(float delta, float worldWidth, float worldHeight, Player player) {
+    public void update(float delta, Player player) {
         if (!isAlive) {
+            body.setLinearVelocity(0f, 0f);
             return;
         }
 
@@ -66,39 +72,20 @@ public class Npc {
             chooseNewDirection();
         }
 
-        move(directionX, directionY, delta);
-        keepInsideWorld(worldWidth, worldHeight);
+        move(directionX, directionY);
     }
 
-    protected void move(float moveX, float moveY, float delta) {
-        x += moveX * speed * delta;
-        y += moveY * speed * delta;
+    protected void move(float moveX, float moveY) {
+        body.setLinearVelocity(
+                PhysicsWorld.toWorldUnits(moveX * speed),
+                PhysicsWorld.toWorldUnits(moveY * speed));
     }
 
-    protected void keepInsideWorld(float worldWidth, float worldHeight) {
-        boolean touchedEdge = false;
+    public void syncFromPhysics(float worldWidth, float worldHeight) {
+        x = PhysicsWorld.toPixels(body.getPosition().x);
+        y = PhysicsWorld.toPixels(body.getPosition().y);
 
-        if(x < 0f){
-            x = 0f;
-            touchedEdge = true;
-        }
-
-        if(x > worldWidth){
-            x = worldWidth;
-            touchedEdge = true;
-        }
-
-        if (y < 0f){
-            y = 0f;
-            touchedEdge = true;
-        }
-
-        if(y > worldHeight){
-            y = worldHeight;
-            touchedEdge = true;
-        }
-
-        if (touchedEdge) {
+        if (pushesAgainstWorldEdge(worldWidth, worldHeight)) {
             chooseNewDirection();
         }
     }
@@ -112,11 +99,20 @@ public class Npc {
         if (hp <= 0) {
             hp = 0;
             isAlive = false;
+            body.setLinearVelocity(0f, 0f);
+            body.setActive(false);
         }
     }
 
     protected float getSpeed() {
         return speed;
+    }
+
+    private boolean pushesAgainstWorldEdge(float worldWidth, float worldHeight) {
+        return (x <= COLLISION_RADIUS + EDGE_EPSILON && directionX < 0f)
+                || (x >= worldWidth - COLLISION_RADIUS - EDGE_EPSILON && directionX > 0f)
+                || (y <= COLLISION_RADIUS + EDGE_EPSILON && directionY < 0f)
+                || (y >= worldHeight - COLLISION_RADIUS - EDGE_EPSILON && directionY > 0f);
     }
 
     private void chooseNewDirection() {

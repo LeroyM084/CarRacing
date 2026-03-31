@@ -5,10 +5,13 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.physics.box2d.Box2D;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.supdevinci.carracing.mob.MobManager;
+import com.supdevinci.carracing.physics.PhysicsWorld;
 import com.supdevinci.carracing.terrain.Map;
 
 /**
@@ -36,21 +39,25 @@ public class Main extends ApplicationAdapter {
     private ShapeRenderer shapeRenderer;
     private OrthographicCamera camera;
     private FitViewport gameViewport;
+    private final Vector3 mouseWorldPosition = new Vector3();
+    private PhysicsWorld physicsWorld;
     private Player player;
 
     private GameState gameState;
 
     @Override
     public void create() {
+        Box2D.init();
         skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
         menu = new Menu(skin, VIEWPORT_WIDTH, VIEWPORT_HEIGHT, this::startGame);
         shapeRenderer = new ShapeRenderer();
         // spriteBatch = new SpriteBatch();
         camera = new OrthographicCamera();
         gameViewport = new FitViewport(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, camera);
-        player = new Player(WORLD_WIDTH / 2f, WORLD_HEIGHT / 2f, PLAYER_SIZE, PLAYER_SPEED);
+        physicsWorld = new PhysicsWorld(WORLD_WIDTH, WORLD_HEIGHT);
+        player = new Player(WORLD_WIDTH / 2f, WORLD_HEIGHT / 2f, PLAYER_SIZE, PLAYER_SPEED, physicsWorld);
 
-        mobManager.generateMobs(2, 5, 5, WORLD_WIDTH, WORLD_HEIGHT);
+        mobManager.generateMobs(2, 5, 5, WORLD_WIDTH, WORLD_HEIGHT, player, physicsWorld);
         showMenu();
     }
 
@@ -83,9 +90,19 @@ public class Main extends ApplicationAdapter {
     }
 
     private void updateGame(float delta) {
-        player.update(delta, WORLD_WIDTH, WORLD_HEIGHT);
+        updateMouseWorldPosition();
+        player.update(delta, mouseWorldPosition.x, mouseWorldPosition.y);
+        mobManager.update(delta, player);
+        physicsWorld.step(delta);
+        player.syncFromPhysics();
+        mobManager.syncFromPhysics(WORLD_WIDTH, WORLD_HEIGHT);
+        mobManager.handlePlayerAttack(player);
         updateCameraPosition();
-        mobManager.update(delta, WORLD_WIDTH, WORLD_HEIGHT, player);
+    }
+
+    private void updateMouseWorldPosition() {
+        mouseWorldPosition.set(Gdx.input.getX(), Gdx.input.getY(), 0f);
+        gameViewport.unproject(mouseWorldPosition);
     }
 
     private void updateCameraPosition() {
@@ -124,5 +141,6 @@ public class Main extends ApplicationAdapter {
         menu.dispose();
         skin.dispose();
         shapeRenderer.dispose();
+        physicsWorld.dispose();
     }
 }

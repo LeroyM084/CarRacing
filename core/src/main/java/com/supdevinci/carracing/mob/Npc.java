@@ -7,6 +7,8 @@ import com.supdevinci.carracing.Player;
 
 
 public class Npc {
+    private static final float COLLISION_RADIUS = 14f;
+
     private float x;
     private float y;
     private final float speed;
@@ -15,22 +17,49 @@ public class Npc {
     private float directionY;
     private float changeDirectionTimer;
 
-    public Npc(float x, float y, float speed){
+    private final Color color;
+    private int hp;
+    public boolean isAlive = true;
+
+    public Npc(float x, float y, float speed, Color color){
         this.x = x;
         this.y = y;
         this.speed = speed;
+        this.hp = 15;
+        this.color = color;
 
         chooseNewDirection();
     }
 
-    public void draw(ShapeRenderer sr){
-        sr.setColor(Color.GOLD);
-        sr.circle(this.getX(), this.getY(), 14f);
+    public void draw(ShapeRenderer sr) {
+        if (!isAlive) {
+            return;
+        }
 
+        float barWidth = 28f;
+        float barHeight = 4f;
+        float barX = getX() - barWidth / 2f;
+        float barY = getY() + COLLISION_RADIUS + 6f;
+
+        float hpPercent = (float) hp / 15f;
+        hpPercent = MathUtils.clamp(hpPercent, 0f, 1f);
+
+        sr.setColor(Color.BLACK);
+        sr.rect(barX, barY, barWidth, barHeight);
+
+        sr.setColor(Color.GREEN);
+        sr.rect(barX, barY, barWidth * hpPercent, barHeight);
+
+        sr.setColor(this.color);
+        sr.circle(getX(), getY(), COLLISION_RADIUS);
     }
 
 
     public void update(float delta, float worldWidth, float worldHeight, Player player) {
+        if (!isAlive) {
+            return;
+        }
+
         changeDirectionTimer -= delta;
 
         if(changeDirectionTimer <= 0f) {
@@ -74,6 +103,18 @@ public class Npc {
         }
     }
 
+    public void takeDamage(int damage) {
+        if (!isAlive) {
+            return;
+        }
+
+        hp -= damage;
+        if (hp <= 0) {
+            hp = 0;
+            isAlive = false;
+        }
+    }
+
     protected float getSpeed() {
         return speed;
     }
@@ -113,5 +154,17 @@ public class Npc {
 
     public float getY() {
         return y;
+    }
+
+    public float getCollisionRadius() {
+        return COLLISION_RADIUS;
+    }
+
+    public boolean isAlive() {
+        return isAlive;
+    }
+
+    public int hp() {
+        return hp;
     }
 }

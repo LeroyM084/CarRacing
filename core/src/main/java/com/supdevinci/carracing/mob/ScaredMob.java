@@ -7,12 +7,16 @@ import com.supdevinci.carracing.Player;
 public class ScaredMob extends Npc{
     private static final float FEAR_RADIUS = 10f;
 
-    public ScaredMob(float x, float y, float speed) {
-        super(x, y, speed);
+    public ScaredMob(float x, float y, float speed, Color color ) {
+        super(x, y, speed,color);
     }
 
     @Override
     public void update(float delta, float worldWidth, float worldHeight, Player player) {
+        if (!isAlive()) {
+            return;
+        }
+
         float dx = player.getX() - getX();
         float dy = player.getY() - getY();
         float distanceSquared = dx * dx + dy * dy;
@@ -27,11 +31,5 @@ public class ScaredMob extends Npc{
         }
 
         super.update(delta, worldWidth, worldHeight, player);
-    }
-
-    @Override
-    public void draw(ShapeRenderer sr) {
-        sr.setColor(Color.CYAN);
-        sr.circle(getX(), getY(), 14f);
     }
 }

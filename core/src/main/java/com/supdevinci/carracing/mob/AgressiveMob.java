@@ -7,12 +7,17 @@ import com.supdevinci.carracing.Player;
 public class AgressiveMob extends Npc{
     private static final float AGGRO_RADIUS = 250f;
 
-    public AgressiveMob(float x, float y, float speed) {
-        super(x, y, speed);
+
+    public AgressiveMob(float x, float y, float speed, Color color) {
+        super(x, y, speed, color);
     }
 
     @Override
     public void update(float delta, float worldWidth, float worldHeight, Player player) {
+        if (!isAlive()) {
+            return;
+        }
+
         float dx = player.getX() - getX();
         float dy = player.getY() - getY();
         float distanceSquared = dx * dx + dy * dy;
@@ -27,11 +32,5 @@ public class AgressiveMob extends Npc{
         }
 
         super.update(delta, worldWidth, worldHeight, player);
-    }
-
-    @Override
-    public void draw(ShapeRenderer sr) {
-        sr.setColor(Color.FIREBRICK);
-        sr.circle(getX(), getY(), 14f);
     }
 }

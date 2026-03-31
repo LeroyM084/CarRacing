@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.supdevinci.carracing.Player;
+import com.supdevinci.carracing.physics.PhysicsWorld;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,74 +12,83 @@ import java.util.List;
 public class MobManager {
     private static final int ATTACK_DAMAGE = 10;
     private static final float MOB_SPEED = 120f;
-    private static final float AGRESSIVE_MOB_SPEED = 130f;
-    private static final float PASSIVE_MOB_SPEED = 130f;
+    private static final float AGGRESSIVE_MOB_SPEED = 130f;
+    private static final float SCARED_MOB_SPEED = 130f;
 
     private final List<Npc> mobList = new ArrayList<>();
-    private final List<AgressiveMob> agressiveMobList = new ArrayList<>();
+    private final List<AggressiveMob> aggressiveMobList = new ArrayList<>();
     private final List<ScaredMob> scaredMobList = new ArrayList<>();
 
-    public void generateMobs(int nbOfMobs, int nbOfPassiveMobs, int nbOfAgressiveMobs, float worldWidth,
-            float worldHeight) {
-        mobList.clear();
-        scaredMobList.clear();
-        agressiveMobList.clear();
-
-        for (int i = 0; i < nbOfMobs; i++) {
-            float x = MathUtils.random(worldWidth);
-            float y = MathUtils.random(worldHeight);
-            mobList.add(new Npc(x, y, MOB_SPEED, Color.GREEN));
-        }
-
-        for (int i = 0; i < nbOfPassiveMobs; i++) {
-            float x = MathUtils.random(worldWidth);
-            float y = MathUtils.random(worldHeight);
-            scaredMobList.add(new ScaredMob(x, y, PASSIVE_MOB_SPEED, Color.CYAN));
-        }
-
-        for (int i = 0; i < nbOfAgressiveMobs; i++) {
-            float x = MathUtils.random(worldWidth);
-            float y = MathUtils.random(worldHeight);
-            agressiveMobList.add(new AgressiveMob(x, y, AGRESSIVE_MOB_SPEED, Color.RED));
-        }
+    private record SpawnCircle(float x, float y, float radius) {
     }
 
-    public void update(float delta, float worldWidth, float worldHeight, Player player) {
-        for (Npc mob : mobList) {
-            mob.update(delta, worldWidth, worldHeight, player);
-        }
+    public void generateMobs(int nbOfMobs, int nbOfScaredMobs, int nbOfAggressiveMobs, float worldWidth,
+            float worldHeight, Player player, PhysicsWorld physicsWorld) {
+        mobList.clear();
+        scaredMobList.clear();
+        aggressiveMobList.clear();
+        List<SpawnCircle> occupiedAreas = new ArrayList<>();
+        occupiedAreas.add(new SpawnCircle(player.getX(), player.getY(), player.getCollisionRadius()));
 
-        for (ScaredMob mob : scaredMobList) {
-            mob.update(delta, worldWidth, worldHeight, player);
-        }
+        spawnNeutralMobs(nbOfMobs, worldWidth, worldHeight, physicsWorld, occupiedAreas);
+        spawnScaredMobs(nbOfScaredMobs, worldWidth, worldHeight, physicsWorld, occupiedAreas);
+        spawnAggressiveMobs(nbOfAggressiveMobs, worldWidth, worldHeight, physicsWorld, occupiedAreas);
+    }
 
-        for (AgressiveMob mob : agressiveMobList) {
-            mob.update(delta, worldWidth, worldHeight, player);
-        }
-
-        if (player.consumeAttackTriggered()) {
-            handleAttackCollisions(player);
-        }
+    public void update(float delta, Player player) {
+        updateMobs(mobList, delta, player);
+        updateMobs(scaredMobList, delta, player);
+        updateMobs(aggressiveMobList, delta, player);
     }
 
     public void draw(ShapeRenderer shapeRenderer) {
-        for (Npc mob : mobList) {
-            mob.draw(shapeRenderer);
+        drawMobs(mobList, shapeRenderer);
+        drawMobs(scaredMobList, shapeRenderer);
+        drawMobs(aggressiveMobList, shapeRenderer);
+    }
+
+    public void syncFromPhysics(float worldWidth, float worldHeight) {
+        syncMobs(mobList, worldWidth, worldHeight);
+        syncMobs(scaredMobList, worldWidth, worldHeight);
+        syncMobs(aggressiveMobList, worldWidth, worldHeight);
+    }
+
+    public void handlePlayerAttack(Player player) {
+        if (!player.consumeAttackTriggered()) {
+            return;
         }
 
-        for (ScaredMob mob : scaredMobList) {
-            mob.draw(shapeRenderer);
-        }
+        checkAttackCollisions(player, mobList);
+        checkAttackCollisions(player, scaredMobList);
+        checkAttackCollisions(player, aggressiveMobList);
+    }
 
-        for (AgressiveMob mob : agressiveMobList) {
-            mob.draw(shapeRenderer);
+    private void spawnNeutralMobs(int count, float worldWidth, float worldHeight, PhysicsWorld physicsWorld,
+            List<SpawnCircle> occupiedAreas) {
+        for (int i = 0; i < count; i++) {
+            SpawnCircle spawn = findSpawnPosition(worldWidth, worldHeight, occupiedAreas);
+            mobList.add(new Npc(spawn.x(), spawn.y(), MOB_SPEED, Color.GREEN, physicsWorld));
+            occupiedAreas.add(spawn);
         }
     }
 
-    private void handleAttackCollisions(Player player) {
-        checkAttackCollisions(player, mobList);
-        checkAttackCollisions(player, scaredMobList);
-        checkAttackCollisions(player, agressiveMobList);
+    private void spawnScaredMobs(int count, float worldWidth, float worldHeight, PhysicsWorld physicsWorld,
+            List<SpawnCircle> occupiedAreas) {
+        for (int i = 0; i < count; i++) {
+            SpawnCircle spawn = findSpawnPosition(worldWidth, worldHeight, occupiedAreas);
+            scaredMobList.add(new ScaredMob(spawn.x(), spawn.y(), SCARED_MOB_SPEED, Color.CYAN, physicsWorld));
+            occupiedAreas.add(spawn);
+        }
+    }
+
+    private void spawnAggressiveMobs(int count, float worldWidth, float worldHeight, PhysicsWorld physicsWorld,
+            List<SpawnCircle> occupiedAreas) {
+        for (int i = 0; i < count; i++) {
+            SpawnCircle spawn = findSpawnPosition(worldWidth, worldHeight, occupiedAreas);
+            aggressiveMobList
+                    .add(new AggressiveMob(spawn.x(), spawn.y(), AGGRESSIVE_MOB_SPEED, Color.RED, physicsWorld));
+            occupiedAreas.add(spawn);
+        }
     }
 
     private void checkAttackCollisions(Player player, List<? extends Npc> mobs) {
@@ -129,5 +139,61 @@ public class MobManager {
         float distSq = distX * distX + distY * distY;
 
         return distSq <= hitRadius * hitRadius;
+    }
+
+    private void updateMobs(List<? extends Npc> mobs, float delta, Player player) {
+        for (Npc mob : mobs) {
+            mob.update(delta, player);
+        }
+    }
+
+    private void drawMobs(List<? extends Npc> mobs, ShapeRenderer shapeRenderer) {
+        for (Npc mob : mobs) {
+            mob.draw(shapeRenderer);
+        }
+    }
+
+    private void syncMobs(List<? extends Npc> mobs, float worldWidth, float worldHeight) {
+        for (Npc mob : mobs) {
+            mob.syncFromPhysics(worldWidth, worldHeight);
+        }
+    }
+
+    private SpawnCircle findSpawnPosition(float worldWidth, float worldHeight, List<SpawnCircle> occupiedAreas) {
+        SpawnCircle fallback = null;
+
+        for (int attempt = 0; attempt < 100; attempt++) {
+            float x = MathUtils.random(Npc.COLLISION_RADIUS, worldWidth - Npc.COLLISION_RADIUS);
+            float y = MathUtils.random(Npc.COLLISION_RADIUS, worldHeight - Npc.COLLISION_RADIUS);
+            SpawnCircle candidate = new SpawnCircle(x, y, Npc.COLLISION_RADIUS);
+
+            if (fallback == null) {
+                fallback = candidate;
+            }
+
+            if (!overlapsExisting(candidate, occupiedAreas)) {
+                return candidate;
+            }
+        }
+
+        if (fallback == null) {
+            return new SpawnCircle(Npc.COLLISION_RADIUS, Npc.COLLISION_RADIUS, Npc.COLLISION_RADIUS);
+        }
+
+        return fallback;
+    }
+
+    private boolean overlapsExisting(SpawnCircle candidate, List<SpawnCircle> occupiedAreas) {
+        for (SpawnCircle occupied : occupiedAreas) {
+            float dx = occupied.x() - candidate.x();
+            float dy = occupied.y() - candidate.y();
+            float minDistance = occupied.radius() + candidate.radius() + 4f;
+
+            if (dx * dx + dy * dy < minDistance * minDistance) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

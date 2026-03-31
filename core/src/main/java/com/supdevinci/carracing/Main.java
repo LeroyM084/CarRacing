@@ -11,8 +11,10 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.supdevinci.carracing.mob.MobManager;
 import com.supdevinci.carracing.terrain.Map;
 
-
-/** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
+/**
+ * {@link com.badlogic.gdx.ApplicationListener} implementation shared by all
+ * platforms.
+ */
 public class Main extends ApplicationAdapter {
     private static final float VIEWPORT_WIDTH = 640f;
     private static final float VIEWPORT_HEIGHT = 480f;
@@ -23,9 +25,6 @@ public class Main extends ApplicationAdapter {
     private static final float PLAYER_SPEED = 800f;
     private final Map map = new Map();
     private final MobManager mobManager = new MobManager();
-
-
-
 
     private enum GameState {
         MENU,
@@ -46,6 +45,7 @@ public class Main extends ApplicationAdapter {
         skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
         menu = new Menu(skin, VIEWPORT_WIDTH, VIEWPORT_HEIGHT, this::startGame);
         shapeRenderer = new ShapeRenderer();
+        // spriteBatch = new SpriteBatch();
         camera = new OrthographicCamera();
         gameViewport = new FitViewport(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, camera);
         player = new Player(WORLD_WIDTH / 2f, WORLD_HEIGHT / 2f, PLAYER_SIZE, PLAYER_SPEED);
@@ -90,10 +90,9 @@ public class Main extends ApplicationAdapter {
 
     private void updateCameraPosition() {
         camera.position.set(
-            MathUtils.clamp(player.getX(), VIEWPORT_WIDTH / 2f, WORLD_WIDTH - VIEWPORT_WIDTH / 2f),
-            MathUtils.clamp(player.getY(), VIEWPORT_HEIGHT / 2f, WORLD_HEIGHT - VIEWPORT_HEIGHT / 2f),
-            0f
-        );
+                MathUtils.clamp(player.getX(), VIEWPORT_WIDTH / 2f, WORLD_WIDTH - VIEWPORT_WIDTH / 2f),
+                MathUtils.clamp(player.getY(), VIEWPORT_HEIGHT / 2f, WORLD_HEIGHT - VIEWPORT_HEIGHT / 2f),
+                0f);
         camera.update();
     }
 
@@ -108,10 +107,6 @@ public class Main extends ApplicationAdapter {
         mobManager.draw(shapeRenderer);
         shapeRenderer.end();
     }
-
-
-
-
 
     @Override
     public void resize(int width, int height) {
